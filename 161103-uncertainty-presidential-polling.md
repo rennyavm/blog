@@ -21,14 +21,10 @@ The data for the plots of FiveThirtyEight's predictions of the national popular 
 
 
 ```python
-# ## this is how you can pull the latest data
-# r = requests.get("http://projects.fivethirtyeight.com/2016-election-forecast/")
-# jsonstr = re.search("race\.stateData = (\{.*\});", r.text).group(1)
-# jdoc = json.loads(jsonstr)
+r = requests.get("http://projects.fivethirtyeight.com/2016-election-forecast/")
+jsonstr = re.search("race\.stateData = (\{.*\});", r.text).group(1)
+jdoc = json.loads(jsonstr)
 
-# ## and this is the snapshot from today. 
-with open('161103-presidential-election.json') as f:
-    jdoc = json.load(f)
 ```
 
 The JSON document contains a few key-value pairs, of which `forecasts` contains the data I'm after.  `jdoc['forecasts']['all']` is a list of forecast objects, one for each date-party pair.  The forecasts for their now-cast, polls, and polls-plus models are given together with margins of error. (I won't bother with the now-cast, since it is an aggresive model that entertains the question what would happen if the election were held today rather than on Election Day)
