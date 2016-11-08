@@ -27,23 +27,26 @@ jdoc = json.loads(jsonstr)
 
 ```
 
-The JSON document contains a few key-value pairs, of which `forecasts` contains the data I'm after.  `jdoc['forecasts']['all']` is a list of forecast objects, one for each date-party pair.  The forecasts for their now-cast, polls, and polls-plus models are given together with margins of error. (I won't bother with the now-cast, since it is an aggresive model that entertains the question what would happen if the election were held today rather than on Election Day)
+The JSON document contains a few key-value pairs, of which `forecasts` contains the data I'm after.  `jdoc['forecasts']['all']` is a list of forecast objects, one for each date-party pair.  The forecasts for their now-cast, polls, and polls-plus models are given together with margins of error. (I won't bother with the now-cast, since it is an aggresive model that entertains the question what would happen if the election were held today rather than on Election Day.)
 
 
 ```python
-df = pd.DataFrame([(pd.to_datetime(f['date']), 
-                    f['party'], 
-                    f['models']['polls']['lo'],
-                    f['models']['polls']['forecast'],
-                    f['models']['polls']['hi'],
-                    f['models']['plus']['lo'],
-                    f['models']['plus']['forecast'],
-                    f['models']['plus']['hi'],) for f in jdoc['forecasts']['all']], 
-                  columns=("date","party","polls_lo","polls_forecast","polls_hi","plus_lo","plus_forecast","plus_hi")
+df = pd.DataFrame([(pd.to_datetime(forecast['date']), 
+                    forecast['party'], 
+                    forecast['models']['polls']['lo'],
+                    forecast['models']['polls']['forecast'],
+                    forecast['models']['polls']['hi'],
+                    forecast['models']['plus']['lo'],
+                    forecast['models']['plus']['forecast'],
+                    forecast['models']['plus']['hi'],) 
+                   for forecast in jdoc['forecasts']['all']], 
+                  columns=("date","party","polls_lo","polls_forecast","polls_hi",
+                           "plus_lo","plus_forecast","plus_hi")
                  )
 
 ```
 
+Now I can plot the uncertainty over time for both the Democratic and Republican parties, for both the polls and polls-plus models. 
 
 ```python
 fig = plt.figure(figsize=(8,6))
@@ -68,4 +71,4 @@ fig.autofmt_xdate()
 ![png](img/161103-uncertainty-presidential-polling-output_8_0.png)
 
 
-FiveThirtyEight has kept their promise that the margins tighten as the election approaches. There are a few hiccups along the way, however, specifically around July 13, July 31, and August 14.  July 13's increase in uncertainty accompanied a [sharp decrease in Clinton's polling](http://fivethirtyeight.com/features/election-update-when-to-freak-out-about-shocking-new-polls/) after the FBI came out with a report about her e-mails and police officers were shot in Dallas.  At the end of July, [Clinton received a very real convention bounce](http://fivethirtyeight.com/features/election-update-clintons-bounce-appears-bigger-than-trumps/) that also decreased the model's uncertainty. The uptick around August 14, however, [didn't accompany any moves in the polls](http://fivethirtyeight.com/features/election-update-clintons-lead-is-clear-and-steady/), but it does come at a time when FiveThirtyEight phased out their convention bounce adjustment. 
+FiveThirtyEight has kept their promise that the margins tighten as the election approaches: the plots show that the uncertainty decreases in both polls and polls-plus models. There are a few hiccups along the way, however, specifically around July 13, July 31, and August 14.  July 13's increase in uncertainty accompanied a [sharp decrease in Clinton's polling](http://fivethirtyeight.com/features/election-update-when-to-freak-out-about-shocking-new-polls/) after the FBI came out with a report about her e-mails and police officers were shot in Dallas.  At the end of July, [Clinton received a very real convention bounce](http://fivethirtyeight.com/features/election-update-clintons-bounce-appears-bigger-than-trumps/) that also decreased the model's uncertainty. The uptick around August 14, however, [didn't accompany any moves in the polls](http://fivethirtyeight.com/features/election-update-clintons-lead-is-clear-and-steady/), but it does come at a time when FiveThirtyEight phased out their convention bounce adjustment. 
