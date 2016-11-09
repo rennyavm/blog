@@ -2,9 +2,9 @@
 # Queuing optimization based on rate of price change
 
 *Reinier van Mourik, 2016-11-08*
-* DRAFT *
+*DRAFT*
 
-The TicketWatch application downloads ticket listings from StubHub for all Bay Area concerts, and all NFL football games.  At any time, I track 600-800 upcoming events.  Because the StubHub API limits me to 10 event listing downloads per minute, it takes over an hour to collect all listings. For many events, prices don't update this often, so a listings download once every two hours is plenty.  But for events coming up very soon, listings change much more frequently, and probing them once every two hours does not capture all of their variability.  And if want to expand my tracking to another event category, tracking several 100 more events and adding more hours to the total time, I would certainly miss many price changes while needlessly grabbing listings for far-in-the-future events.  
+The [TicketWatch](http://ticketwatch.xyz) application downloads ticket listings from StubHub for all Bay Area concerts, and all NFL football games.  At any time, I track 600-800 upcoming events.  Because the StubHub API limits me to 10 event listing downloads per minute, it takes over an hour to collect all listings. For many events, prices don't update this often, so a listings download once every two hours is plenty.  But for events coming up very soon, listings change much more frequently, and probing them once every two hours does not capture all of their variability.  And if want to expand my tracking to another event category, tracking several 100 more events and adding more hours to the total time, I would certainly miss many price changes while needlessly grabbing listings for far-in-the-future events.  
 
 The answer is to update events that are sooner more often than later events.  After gathering the list of events for which to check listings, I'll build a queue where sooner events appear several times and events far into the future only once. The relative frequency should mirror the rate of price updates.  So how often do ticket prices on StubHub change, and how does that rate depend on the time-to-event?  
 
@@ -72,15 +72,21 @@ set(ax2, 'Box', 'on', 'XDir', 'reverse', 'XLim', [60,440], 'YAxisLocation', 'rig
 xlabel('days to event'); 
 legend(hl, {'weekly bins'});
 ```
-![png](img/161108-queuing-optimization/01-ratePriceChange.png)
+![png](img/01-ratePriceChange.png)
 
-More precisely, the number of changes $k$ in a time interval of length $\delta t$ at time-to-event $t$ is Poisson distributed with mean $\lambda(t)\delta t$, and the estimate of the parameter $\lambda$ is simply $$\lambda = \sum_i k_i / \sum_i \delta t_i$$ where $k_i$ is 0 if the price has not changed and 1 if it has.  This is how I was able to add a 68% confidence interval in the plot, using the confidence intervals for a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution#Confidence_interval). 
+More precisely, the number of changes *k* in a time interval of length *dt* at time-to-event *t* is Poisson distributed with mean ![png](img/eq01.png), and the estimate of the parameter ![png](img/eq02.png) for a time bin centered at *t* is simply 
+![png](img/eq03.png) 
+for all data in that bin, where *k* is 0 if the price has not changed and 1 if it has.  This is how I was able to add a 68% confidence interval in the plot, using the confidence intervals for a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution#Confidence_interval). 
 
 I've made two assumptions:
-* *Price changes are independent and can all be described by the parameter $\lambda(t)$*  I assume the amount of time to the next price change does not depend on whether the change was a purchase or a new listing or how much the price has changed.  This is what allows me to estimate the parameter $\lambda(t)$ by summing over all of the time intervals.
-* *A price only changes 0 or 1 times in a time interval.*  A price change in an interval could mean that the price has changed twice, and no price change could mean that a lower price listing was posted and sold in a time interval.  I assume that the time intervals are short enough that neither of this happens, but it effectively means that my estimate of $\lambda(t)$ is a lower bound.  
+* *Price changes are independent and can all be described by the parameter ![png](img/eq02.png)*  I assume the amount of time to the next price change does not depend on whether the change was a purchase or a new listing or how much the price has changed.  This is what allows me to estimate the parameter ![png](img/eq02.png) by summing over all of the time intervals.
+* *A price only changes 0 or 1 times in a time interval.*  A price change in an interval could mean that the price has changed twice, and no price change could mean that a lower price listing was posted and sold in a time interval.  I assume that the time intervals are short enough that neither of this happens, but it effectively means that my estimate of ![png](img/eq02.png) is a lower bound.  
 
-The plot for daily bins shows the overall trend, and the hourly plot shows that the rate of change varies throughout the day.  First I looked at the overall trend.  It looks like it could be a power-law relationship, so I redrew the plot on log-log axes.  Since the resulting curve is approximately linear, a power law should fit the data well.  A weighted linear fit gives $\log(\lambda(t)) = 0.33\log(t) - 5.9$, which means my estimate of the trend is: $$\lambda(t) = 0.0026 t^{-1/3}$$  ($\lambda(t)$ is in [1/second] and t is given in [second])
+The plot for daily bins shows the overall trend, and the hourly plot shows that the rate of change varies throughout the day.  First I looked at the overall trend.  It looks like it could be a power-law relationship, so I redrew the plot on log-log axes.  Since the resulting curve is approximately linear, a power law should fit the data well.  A weighted linear fit gives 
+![png](img/eq04.png), 
+which means my estimate of the trend is: 
+![png](img/eq05.png)
+(![png](img/eq02.png) is in [1/second] and t is given in [second])
 
 ```matlab
 s = t_day<=189*24*60*60; 
@@ -106,7 +112,7 @@ ylim([-13,-9]);
       p1 =     -0.3334  (-0.3543, -0.3124)
       p2 =      -5.948  (-6.261, -5.635)
 
-![png](img/161108-queuing-optimization/02-loglogRatePriceChange.png)
+![png](img/02-loglogRatePriceChange.png)
 
 Next, for completeness's sake, I detrended the data to leave the hourly component.  I checked whether the daily and hourly components are additive (by subtracting the trend from the data) or multiplicative (by dividing the data by the trend) and saw that the remainder is roughly periodic under the multiplicative model.  I then collected the hourly data into hour-of-day bins to reveal the fluctuation of the rate of change throughout the day.  
 
@@ -132,22 +138,29 @@ xlabel('days to event');
 ylabel('seasonal component of rate of price change'); 
 xlim([0,30]);
 ```
-![png](img/161108-queuing-optimization/03-detrended.png)
+![png](img/03-detrended.png)
 
 Note, however, that the hour-of-day in this plot reflects hour-to-event more so than a time of day, so the curve doesn't perfectly reflect user activity at different times of day.  In fact, the user activity likely depends on time-of-event on the day of and maybe the day before, whereas it likely depends on time-of-day further out.  A proper analysis of the seasonality would require actual timestamps rather than time-to-event data.  But while the daily fluctuation can be taken into account for the queuing frequency, the gain would be relatively mild, I won't bother with that here. 
 
-Now I know that the rate of change varies with time-to-event via a $-1/3$ power, I can determine the relative frequency each event needs to appear in the queue.  It means that, for example, if I want an event one year out to appear once in the queue, an event coming up in 8 hours should appear (8 hours/365 days)^(-1/3) = 10.3 times in the queue.  
+Now I know that the rate of change varies with time-to-event via a -1/3 power, I can determine the relative frequency each event needs to appear in the queue.  It means that, for example, if I want an event one year out to appear once in the queue, an event coming up in 8 hours should appear ![png](img/eq06.png) times in the queue.  
 
-To implement this, I set the frequency of an event 365 days away to 1 (and the few events further than a year out as well) and I calculate the required number of appearances for all events, with a limit of 10.3 (the frequency of an event 8 hours away).  To build the queue, I represent it by a number line from 0 to 1, and I drop each event onto it at as positions as required, evenly spaced along the line.  For example, an event with frequency 5 gets dropped at [0.1, 0.3, 0.5, 0.7, 0.9].  And that's it: downloading listings for events in this order updates upcoming events more frequently than events further out, with a relative frequency that mirrors the actual update frequency of prices. 
+To implement this, I set the frequency of an event 365 days away to 1 (and the few events further than a year out as well) and I calculate the required number of appearances for all events, with a limit of 10.3 (the frequency of an event 8 hours away).  To build the queue, I represent it by a number line from 0 to 1, and I drop each event onto it at as many positions as required, evenly spaced along the line.  For example, an event with frequency 5 gets dropped at `[0.1, 0.3, 0.5, 0.7, 0.9]`.  And that's it: downloading listings for events in the resulting order updates upcoming events more frequently than events further out, with a relative frequency that mirrors the actual update frequency of prices. 
 
 
 ```python
-freqs = [(e[0], (min(max(8/24,e[1]),364.9)/365.0)**(-1/3)) for e in results]
+conn = sqlite3.connect('ticketwatch.db')
+cu = conn.cursor()
+cu.execute("SELECT id, (eventTS-strftime('%s','now'))/86400.0 AS daysToEvent FROM events WHERE status=2")
+results = cu.fetchall()
+conn.close()
+
+# list of tuples (eventid, frequency)
+freqs = [(r[0], (min(max(8/24,r[1]),364.9)/365.0)**(-1/3)) for r in results]
 queue = []
 for f in freqs:
     x = 1/(2*f[1])
     while x<1:
-        queue.append((f[0],x))
+        queue.append((f[0],x))  # tuple eventid and queue position
         x+=1/f[1]
 
 queue.sort(key=lambda q: q[1])
