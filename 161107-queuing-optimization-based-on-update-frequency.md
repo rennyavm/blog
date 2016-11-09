@@ -2,6 +2,7 @@
 # Queuing optimization based on rate of price change
 
 *Reinier van Mourik, 2016-11-08*
+
 *DRAFT*
 
 The [TicketWatch](http://ticketwatch.xyz) application downloads ticket listings from StubHub for all Bay Area concerts, and all NFL football games.  At any time, I track 600-800 upcoming events.  Because the StubHub API limits me to 10 event listing downloads per minute, it takes over an hour to collect all listings. For many events, prices don't update this often, so a listings download once every two hours is plenty.  But for events coming up very soon, listings change much more frequently, and probing them once every two hours does not capture all of their variability.  And if want to expand my tracking to another event category, tracking several 100 more events and adding more hours to the total time, I would certainly miss many price changes while needlessly grabbing listings for far-in-the-future events.  
@@ -75,7 +76,9 @@ legend(hl, {'weekly bins'});
 ![png](img/161108-queuing-optimization/01-ratePriceChange.png)
 
 More precisely, the number of changes *k* in a time interval of length *dt* at time-to-event *t* is Poisson distributed with mean ![png](img/161108-queuing-optimization/eq01.png), and the estimate of the parameter ![png](img/161108-queuing-optimization/eq02.png) for a time bin centered at *t* is simply 
+
 ![png](img/161108-queuing-optimization/eq03.png) 
+
 for all data in that bin, where *k* is 0 if the price has not changed and 1 if it has.  This is how I was able to add a 68% confidence interval in the plot, using the confidence intervals for a [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution#Confidence_interval). 
 
 I've made two assumptions:
@@ -83,9 +86,13 @@ I've made two assumptions:
 * *A price only changes 0 or 1 times in a time interval.*  A price change in an interval could mean that the price has changed twice, and no price change could mean that a lower price listing was posted and sold in a time interval.  I assume that the time intervals are short enough that neither of this happens, but it effectively means that my estimate of ![png](img/161108-queuing-optimization/eq02.png) is a lower bound.  
 
 The plot for daily bins shows the overall trend, and the hourly plot shows that the rate of change varies throughout the day.  First I looked at the overall trend.  It looks like it could be a power-law relationship, so I redrew the plot on log-log axes.  Since the resulting curve is approximately linear, a power law should fit the data well.  A weighted linear fit gives 
+
 ![png](img/161108-queuing-optimization/eq04.png), 
+
 which means my estimate of the trend is: 
+
 ![png](img/161108-queuing-optimization/eq05.png)
+
 (![png](img/161108-queuing-optimization/eq02.png) is in [1/second] and t is given in [second])
 
 ```matlab
